@@ -22,17 +22,17 @@ const App = () => {
       <Route
         path="/client/*"
         element={
-          <PrivateRoute role={2 /* si el cliente es role 2 */}>
+          <PrivateRoute role={3 /* Cliente es role 3 */}>
             <ClientLayout />
           </PrivateRoute>
         }
       />
 
-      {/* Admin protegido */}
+      {/* Admin/Barber protegido */}
       <Route
         path="/admin/*"
         element={
-          <PrivateRoute role={1 /* si el admin es role 1 */}>
+          <PrivateRoute role={[1, 2] /* Admin es 1, barbero es 2 */}>
             <AdminLayout />
           </PrivateRoute>
         }

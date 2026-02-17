@@ -22,6 +22,7 @@ const barbershopRoutes = require("./routes/barbershop.routes");
 const serviceRoutes = require("./routes/service.routes");
 const appointmentRoutes = require("./routes/appointment.routes");
 const uploadRoutes = require("./routes/upload.routes");
+const statsRoutes = require("./routes/stats.routes");
 
 const app = express();
 
@@ -104,6 +105,7 @@ app.use("/api/barbershops", barbershopRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/stats", statsRoutes);
 
 // ===============================================
 // ⚠️ Error Handler

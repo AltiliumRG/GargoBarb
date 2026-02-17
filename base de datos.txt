@@ -1,0 +1,70 @@
+-- ==========================================
+-- SCRIPT DE CREACIÓN DE BASE DE DATOS
+-- PROYECTO: GARGOBARBA
+-- ==========================================
+
+-- 1. CREACIÓN DE LA BASE DE DATOS
+CREATE DATABASE IF NOT EXISTS gargobarb;
+USE gargobarb;
+
+-- 2. TABLA: users
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    full_name VARCHAR(255) NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NULL,
+    role_id INT NOT NULL DEFAULT 3, -- 1=admin, 2=barber, 3=client
+    avatar_url VARCHAR(255) NULL,
+    specialty VARCHAR(100) NULL, -- Especialidad (solo para barberos)
+    experience INT NULL, -- Años de experiencia (solo para barberos)
+    refresh_token_hash VARCHAR(64) NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL
+) ENGINE=InnoDB;
+
+-- 3. TABLA: barbershops
+CREATE TABLE IF NOT EXISTS barbershops (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    address VARCHAR(255) NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    CONSTRAINT fk_barbershop_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- 4. TABLA: services
+CREATE TABLE IF NOT EXISTS services (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    barbershop_id BIGINT UNSIGNED NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description TEXT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    duration_minutes INT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    CONSTRAINT fk_service_barbershop FOREIGN KEY (barbershop_id) REFERENCES barbershops(id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- 5. TABLA: appointments
+CREATE TABLE IF NOT EXISTS appointments (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    barbershop_id BIGINT UNSIGNED NOT NULL,
+    service_id BIGINT UNSIGNED NOT NULL,
+    barber_id INT NULL, -- El barbero que realiza el servicio (role_id=2)
+    date DATE NOT NULL,
+    time TIME NOT NULL,
+    status ENUM('pendiente', 'confirmada', 'cancelada', 'completada') DEFAULT 'pendiente',
+    notes VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    CONSTRAINT fk_appointment_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_appointment_barbershop FOREIGN KEY (barbershop_id) REFERENCES barbershops(id) ON DELETE CASCADE,
+    CONSTRAINT fk_appointment_service FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE,
+    CONSTRAINT fk_appointment_barber FOREIGN KEY (barber_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;

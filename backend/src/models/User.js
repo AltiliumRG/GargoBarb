@@ -56,7 +56,14 @@ const User = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
-
+    specialty: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
+    experience: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     // 🔐 Guardará el refresh token encriptado (sha256 → 64 chars)
     refresh_token_hash: {
       type: DataTypes.STRING(64),

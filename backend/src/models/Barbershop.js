@@ -10,7 +10,7 @@ const Barbershop = sequelize.define('Barbershop', {
     primaryKey: true,
   },
   user_id: {
-    type: DataTypes.BIGINT.UNSIGNED,
+    type: DataTypes.INTEGER,
     allowNull: false,
     references: {
       model: 'users',

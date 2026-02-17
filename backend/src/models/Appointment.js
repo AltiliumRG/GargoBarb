@@ -11,7 +11,7 @@ const Appointment = sequelize.define('Appointment', {
     autoIncrement: true,
   },
   user_id: {
-    type: DataTypes.BIGINT.UNSIGNED,
+    type: DataTypes.INTEGER,
     allowNull: false,
     references: {
       model: 'users',
@@ -37,6 +37,15 @@ const Appointment = sequelize.define('Appointment', {
     },
     onDelete: 'CASCADE',
   },
+  barber_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'users',
+      key: 'id',
+    },
+    onDelete: 'SET NULL',
+  },
   date: {
     type: DataTypes.DATEONLY,
     allowNull: false,
@@ -61,6 +70,7 @@ const Appointment = sequelize.define('Appointment', {
 
 // Relaciones
 Appointment.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+Appointment.belongsTo(User, { foreignKey: 'barber_id', as: 'barber' });
 Appointment.belongsTo(Barbershop, { foreignKey: 'barbershop_id', as: 'barbershop' });
 Appointment.belongsTo(Service, { foreignKey: 'service_id', as: 'service' });
 

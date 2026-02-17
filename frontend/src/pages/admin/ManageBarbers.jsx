@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Scissors, Edit3, Trash2, UserPlus, Search } from "lucide-react";
+import api from "../../api/api";
 
 const ManageBarbers = () => {
   const [barbers, setBarbers] = useState([]);
   const [form, setForm] = useState({
-    name: "",
+    username: "",
+    full_name: "",
     email: "",
     password: "",
     specialty: "",
@@ -13,13 +15,13 @@ const ManageBarbers = () => {
   });
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   // ✅ Cargar barberos
   const fetchBarbers = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/users?role=barber");
-      const data = await res.json();
-      setBarbers(data);
+      const res = await api.get("/users?role=2");
+      setBarbers(res.data);
     } catch (error) {
       console.error("Error al cargar barberos:", error);
     }
@@ -32,23 +34,22 @@ const ManageBarbers = () => {
   // ✅ Guardar barbero (nuevo o editado)
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const method = editingId ? "PUT" : "POST";
-    const url = editingId
-      ? `http://localhost:5000/api/users/${editingId}`
-      : "http://localhost:5000/api/users";
-
-    const body = JSON.stringify({ ...form, role: "barber" });
+    setLoading(true);
 
     try {
-      await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body,
-      });
+      if (editingId) {
+        await api.put(`/users/${editingId}`, form);
+      } else {
+        // Para crear un nuevo barbero, usamos el endpoint de registro con role_id: 2
+        await api.post("/auth/register", {
+          ...form,
+          role_id: 2
+        });
+      }
       fetchBarbers();
       setForm({
-        name: "",
+        username: "",
+        full_name: "",
         email: "",
         password: "",
         specialty: "",
@@ -57,6 +58,9 @@ const ManageBarbers = () => {
       setEditingId(null);
     } catch (error) {
       console.error("Error al guardar barbero:", error);
+      alert(error.response?.data?.error || "Error al procesar la solicitud");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -64,7 +68,7 @@ const ManageBarbers = () => {
   const deleteBarber = async (id) => {
     if (!confirm("¿Seguro que deseas eliminar este barbero?")) return;
     try {
-      await fetch(`http://localhost:5000/api/users/${id}`, { method: "DELETE" });
+      await api.delete(`/users/${id}`);
       fetchBarbers();
     } catch (error) {
       console.error("Error al eliminar barbero:", error);
@@ -74,7 +78,8 @@ const ManageBarbers = () => {
   // ✅ Filtrado
   const filteredBarbers = barbers.filter(
     (b) =>
-      b.name?.toLowerCase().includes(search.toLowerCase()) ||
+      b.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+      b.username?.toLowerCase().includes(search.toLowerCase()) ||
       b.email?.toLowerCase().includes(search.toLowerCase()) ||
       b.specialty?.toLowerCase().includes(search.toLowerCase())
   );
@@ -96,7 +101,7 @@ const ManageBarbers = () => {
           <Search className="text-yellow-400 mr-2" size={18} />
           <input
             type="text"
-            placeholder="Buscar barbero..."
+            placeholder="Buscar por nombre, usuario o especialidad..."
             className="bg-transparent w-full focus:outline-none text-gray-200"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -110,15 +115,24 @@ const ManageBarbers = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="bg-gray-900/70 backdrop-blur-lg border border-yellow-500/20 p-6 rounded-2xl shadow-lg mb-10 max-w-4xl mx-auto"
+        className="bg-gray-900/70 backdrop-blur-lg border border-yellow-500/20 p-6 rounded-2xl shadow-lg mb-10 max-w-5xl mx-auto"
       >
-        <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <input
             type="text"
-            placeholder="Nombre"
+            placeholder="Usuario (username)"
             className="p-3 rounded-lg bg-gray-800 border border-yellow-500/20 text-gray-200 focus:border-yellow-500 outline-none"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            value={form.username}
+            onChange={(e) => setForm({ ...form, username: e.target.value })}
+            required
+            disabled={!!editingId} // No dejamos cambiar el username en edición por simplicidad
+          />
+          <input
+            type="text"
+            placeholder="Nombre Completo"
+            className="p-3 rounded-lg bg-gray-800 border border-yellow-500/20 text-gray-200 focus:border-yellow-500 outline-none"
+            value={form.full_name}
+            onChange={(e) => setForm({ ...form, full_name: e.target.value })}
             required
           />
           <input
@@ -131,7 +145,7 @@ const ManageBarbers = () => {
           />
           <input
             type="password"
-            placeholder="Contraseña"
+            placeholder={editingId ? "Nueva Contraseña (opcional)" : "Contraseña"}
             className="p-3 rounded-lg bg-gray-800 border border-yellow-500/20 text-gray-200 focus:border-yellow-500 outline-none"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -139,7 +153,7 @@ const ManageBarbers = () => {
           />
           <input
             type="text"
-            placeholder="Especialidad (fade, barba, etc)"
+            placeholder="Especialidad (e.g. Fades, Barba)"
             className="p-3 rounded-lg bg-gray-800 border border-yellow-500/20 text-gray-200 focus:border-yellow-500 outline-none"
             value={form.specialty}
             onChange={(e) => setForm({ ...form, specialty: e.target.value })}
@@ -154,10 +168,15 @@ const ManageBarbers = () => {
         </div>
         <button
           type="submit"
-          className="mt-4 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-yellow-500 to-yellow-700 text-black font-semibold rounded-lg shadow-md hover:shadow-yellow-500/40 transition-all"
+          disabled={loading}
+          className="mt-4 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-yellow-500 to-yellow-700 text-black font-semibold rounded-lg shadow-md hover:shadow-yellow-500/40 transition-all disabled:opacity-50"
         >
-          <UserPlus size={18} />
-          {editingId ? "Guardar Cambios" : "Agregar Barbero"}
+          {loading ? (
+            <div className="h-5 w-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+          ) : (
+            <UserPlus size={18} />
+          )}
+          {editingId ? "Actualizar Datos" : "Registrar Barbero"}
         </button>
       </motion.form>
 
@@ -166,58 +185,80 @@ const ManageBarbers = () => {
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="overflow-x-auto"
+        className="bg-gray-900/50 rounded-2xl overflow-hidden border border-gray-800 shadow-2xl"
       >
-        <table className="w-full border-collapse text-gray-200">
-          <thead>
-            <tr className="bg-gray-800 border-b border-yellow-500/20">
-              <th className="py-3 px-4 text-left">Nombre</th>
-              <th className="py-3 px-4 text-left">Correo</th>
-              <th className="py-3 px-4 text-left">Especialidad</th>
-              <th className="py-3 px-4 text-center">Experiencia</th>
-              <th className="py-3 px-4 text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredBarbers.map((b) => (
-              <motion.tr
-                key={b._id}
-                whileHover={{ scale: 1.01, backgroundColor: "#1a1a1a" }}
-                className="border-b border-yellow-500/10 transition-all"
-              >
-                <td className="py-3 px-4">{b.name}</td>
-                <td className="py-3 px-4">{b.email}</td>
-                <td className="py-3 px-4">{b.specialty || "—"}</td>
-                <td className="py-3 px-4 text-center">
-                  {b.experience ? `${b.experience} años` : "—"}
-                </td>
-                <td className="py-3 px-4 text-center flex justify-center gap-3">
-                  <button
-                    onClick={() => {
-                      setForm({
-                        name: b.name,
-                        email: b.email,
-                        password: "",
-                        specialty: b.specialty,
-                        experience: b.experience,
-                      });
-                      setEditingId(b._id);
-                    }}
-                    className="text-yellow-400 hover:text-yellow-300 transition"
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-gray-800/50 text-yellow-500 text-xs uppercase tracking-wider">
+              <tr>
+                <th className="py-4 px-6 font-semibold">Barbero</th>
+                <th className="py-4 px-6 font-semibold">Contacto</th>
+                <th className="py-4 px-6 font-semibold">Perfil</th>
+                <th className="py-4 px-6 text-center font-semibold">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-800">
+              {filteredBarbers.length > 0 ? (
+                filteredBarbers.map((b) => (
+                  <tr
+                    key={b.id}
+                    className="hover:bg-gray-800/30 transition-colors"
                   >
-                    <Edit3 size={20} />
-                  </button>
-                  <button
-                    onClick={() => deleteBarber(b._id)}
-                    className="text-red-500 hover:text-red-400 transition"
-                  >
-                    <Trash2 size={20} />
-                  </button>
-                </td>
-              </motion.tr>
-            ))}
-          </tbody>
-        </table>
+                    <td className="py-4 px-6">
+                      <div className="font-medium text-white">{b.full_name || b.username}</div>
+                      <div className="text-xs text-gray-500">@{b.username}</div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="text-sm text-gray-300">{b.email}</div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="text-sm font-semibold text-yellow-600 truncate max-w-[150px]">
+                        {b.specialty || "General"}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {b.experience ? `${b.experience} años exp.` : "N/A"}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex justify-center gap-4">
+                        <button
+                          onClick={() => {
+                            setForm({
+                              username: b.username,
+                              full_name: b.full_name || "",
+                              email: b.email,
+                              password: "",
+                              specialty: b.specialty || "",
+                              experience: b.experience || "",
+                            });
+                            setEditingId(b.id);
+                          }}
+                          className="p-2 hover:bg-yellow-500/10 rounded-full text-yellow-500 transition-colors"
+                          title="Editar"
+                        >
+                          <Edit3 size={18} />
+                        </button>
+                        <button
+                          onClick={() => deleteBarber(b.id)}
+                          className="p-2 hover:bg-red-500/10 rounded-full text-red-500 transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="4" className="py-10 text-center text-gray-500">
+                    No se encontraron barberos.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </motion.div>
     </div>
   );
